@@ -1,6 +1,6 @@
 # APB Protocol Verification using UVM
 
-A complete UVM testbench for an **AMBA APB slave**. The bench uses a split-agent style:
+UVM testbench for an **AMBA APB slave**. The bench uses a split-agent style:
 - **Write agent (ACTIVE)** — sequencer + driver + write monitor  
 - **Read agent (PASSIVE)** — read monitor only  
 - **Scoreboard** and **functional coverage** wired via analysis ports
