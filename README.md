@@ -11,9 +11,6 @@ A complete UVM testbench for an **AMBA APB slave**. The bench uses a split-agent
 ---
 
 ## Testbench Architecture
-
-> Put this image at `docs/TB_Architecture.png` in the repo so it renders on GitHub.
-
 ![Testbench Architecture](TB_Architecture.png)
 
 **Hierarchy:** `Top → Test → Env`
