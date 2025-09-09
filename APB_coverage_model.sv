@@ -82,8 +82,8 @@ class APB_coverage_model extends uvm_component;
       bins l0 = {0};           // no wait states
       bins l1 = {1};
       bins l2 = {2};
-      bins l3_4 = {[3:4]};
-      bins l5p = {[5:$]};      // long stalls
+      bins l3 = {3};
+      bins l4p = {[4:$]};      // long stalls
     }
 
     x_dir_lat: cross cp_dir, cp_latency;
@@ -127,36 +127,48 @@ class APB_coverage_model extends uvm_component;
   int unsigned wait_cnt;
 
   task run_phase(uvm_phase phase);
-    // Wait for reset deassert (active-high reset assumed)
-    if (vif.PRESET !== 1'b0) @(negedge vif.PRESET);
-    wait_cnt = 0;
+  // Wait for reset release (active-low)
+  if (vif.PRESET !== 1'b0) @(negedge vif.PRESET);
 
-    forever begin
-      @(posedge vif.PCLK);
+  wait_cnt = 0;
 
-      // Re-check reset synchronously; clear counters if asserted
-      if (vif.PRESET) begin
-        wait_cnt = 0;
-        continue;
+  forever begin
+    @(posedge vif.PCLK);
+    #1step; // sample after DUT settles
+
+    // If reset asserted, clear and continue
+    if (vif.PRESET) begin
+      wait_cnt = 0;
+      continue;
+    end
+
+    // SETUP: PSEL=1, PENABLE=0  -> start of a new transfer next cycle
+    if (vif.PSEL && !vif.PENABLE) begin
+      wait_cnt = 0;
+    end
+
+    // ACCESS: PSEL=1, PENABLE=1
+    if (vif.PSEL && vif.PENABLE) begin
+      `uvm_info("COVDBG",
+        $sformatf("ACCESS tick: PSEL=%0b PENABLE=%0b PREADY=%0b PWRITE=%0b wait_cnt=%0d",
+                  vif.PSEL, vif.PENABLE, vif.PREADY, vif.PWRITE, wait_cnt),
+        UVM_LOW)
+
+      // If ready this cycle, sample with the current count (no off-by-one)
+      if (vif.PREADY) begin
+        cg_proto.sample(vif.PWRITE, wait_cnt);
+        wait_cnt = 0; 
       end
-
-      // Detect SETUP (PSEL=1,PENABLE=0): next cycle is ACCESS, reset counter
-      if (vif.PSEL && !vif.PENABLE)
-        wait_cnt = 0;
-
-      // ACCESS (PSEL=1,PENABLE=1): count until PREADY==1, then sample
-      if (vif.PSEL && vif.PENABLE) begin
-        if (!vif.PREADY) begin
-          wait_cnt++;
-        end
-        else begin
-          // Transfer completes this cycle
-          cg_proto.sample(vif.PWRITE, wait_cnt);
-          wait_cnt = 0;
-        end
+      else begin
+        wait_cnt++;
       end
     end
-  endtask
+    // Bus idle
+    else if (!vif.PSEL) begin
+      wait_cnt = 0;
+    end
+  end
+endtask
 
 endclass
 

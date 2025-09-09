@@ -65,7 +65,7 @@ class APB_driver extends uvm_driver#(APB_txn);
 
     // Wait for PREADY (slave may insert wait states)
     wait_cnt = 0;
-    while (vif.PREADY !== 1'b1) begin
+    do begin
       @(posedge vif.PCLK);
       wait_cnt++;
       if (wait_cnt > ready_timeout) begin
@@ -74,25 +74,25 @@ class APB_driver extends uvm_driver#(APB_txn);
                     wait_cnt, tr.addr_byte, tr.write))
         break;
       end
-    end
+    end while (!vif.PREADY);
 
-    // Optional logging (read data valid when PREADY==1 in ACCESS)
+    // Handshake happened this edge: sample/log now
     if (!tr.write) begin
+      tr.rdata = vif.PRDATA;
       `uvm_info("APB_DRV",
-                $sformatf("READ  @A=0x%08h -> RDATA=0x%08h", tr.addr_byte, vif.PRDATA),
-        UVM_LOW)
-      // If you want to pass back to the sequence:
-      // tr.rdata = vif.PRDATA;
+        $sformatf("READ  @A=0x%08h -> RDATA=0x%08h", tr.addr_byte, tr.rdata), UVM_LOW)
     end else begin
       `uvm_info("APB_DRV",
-                $sformatf("WRITE @A=0x%08h WDATA=0x%08h", tr.addr_byte, tr.wdata),
-        UVM_LOW)
+        $sformatf("WRITE @A=0x%08h WDATA=0x%08h", tr.addr_byte, tr.wdata), UVM_LOW)
     end
 
     // ---------------- Complete: return to IDLE ----------------
-    @(posedge vif.PCLK);
-    vif.PSEL     <= 1'b0;
-    vif.PENABLE  <= 1'b0;
+    // Drop PENABLE *now* so the NEXT cycle is not another ACCESS.
+    // If not doing back-to-back, also drop PSEL now.
+    vif.PENABLE <= 1'b0;
+    vif.PSEL    <= 1'b0;   // keep high here only if you plan back-to-back
+
+    @(posedge vif.PCLK);   // one bubble (or next SETUP if you keep PSEL high)
   endtask
 
 endclass
