@@ -9,7 +9,6 @@ interface APB_if #(parameter DATA_W = 32) ();
   logic [DATA_W-1:0] PWDATA;
   logic [DATA_W-1:0] PRDATA;
   logic        PREADY;
-  logic [DATA_W/8-1:0] PSTRB;       // uncomment if you have APB4 strobes
 
   modport master (output PSEL, PENABLE, PADDR, PWRITE, PWDATA,
                   input  PRDATA, PREADY);
