@@ -53,7 +53,7 @@ class APB_test extends uvm_test;
       randcase
         wt_wr_rd: begin
           `uvm_info("TEST", "Starting APB_seq_WrData_RdData", UVM_LOW)
-          seq_wr_rd.start(env.W_agent.seqr); // or env.wagent.sqr if that's your name
+          seq_wr_rd.start(env.W_agent.seqr); 
           `uvm_info("TEST", "Done APB_seq_WrData_RdData", UVM_LOW)
         end
         wt_burst: begin

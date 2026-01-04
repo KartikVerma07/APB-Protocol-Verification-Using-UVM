@@ -27,9 +27,6 @@ class APB_seq_WrData_RdData extends uvm_sequence#(APB_txn);
         addr_byte[ADDR_LSB-1:0] == '0;
         (addr_byte >> ADDR_LSB) inside {[0:DEPTH-1]};
       });
-
-      // If you support APB4 strobes, drive full-word by default
-      wr.strb = 4'hF;
     finish_item(wr);
 
     // Keep the exact address for readback
@@ -43,7 +40,6 @@ class APB_seq_WrData_RdData extends uvm_sequence#(APB_txn);
     start_item(rd);
       rd.write = 1'b0;
       rd.addr_byte  = last_addr;   // read back what we just wrote
-      rd.strb  = '0;          // ignored on reads
     finish_item(rd);
   endtask
 endclass

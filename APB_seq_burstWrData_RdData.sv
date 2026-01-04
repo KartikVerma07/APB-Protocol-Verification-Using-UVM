@@ -30,8 +30,6 @@ class APB_seq_burstWrData_RdData extends uvm_sequence#(APB_txn);
         // Each step is one word => shift by ADDR_LSB (e.g., +4 for 32-bit words)
         wr.addr_byte  = base_addr_byte + (i << ADDR_LSB);
         wr.wdata = $urandom();
-        // APB4 full-word write; if your bus is APB3, field is ignored by driver/monitor
-        wr.strb  = 4'hF;
       finish_item(wr);
     end
 
@@ -44,7 +42,6 @@ class APB_seq_burstWrData_RdData extends uvm_sequence#(APB_txn);
       start_item(rd);
         rd.write = 1'b0;
         rd.addr_byte  = base_addr_byte + (i << ADDR_LSB);
-        rd.strb  = '0;  // ignored for reads
       finish_item(rd);
     end
   endtask

@@ -26,7 +26,6 @@ class APB_wr_monitor extends uvm_component;
         t.write     = 1'b1;
         t.addr_byte = vif.PADDR;
         t.wdata     = vif.PWDATA;
-        t.strb      = vif.PSTRB; 
 
         ap_write.write(t);
 
