@@ -1,10 +1,10 @@
 class APB_env extends uvm_env;
   `uvm_component_utils(APB_env)
 
-  APB_w_agent   W_agent; // ACTIVE
-  APB_r_agent   R_agent; // PASSIVE
-  APB_scoreboard sb;
-  apb_cov        cov;
+  APB_w_agent          W_agent; // ACTIVE
+  APB_r_agent          R_agent; // PASSIVE
+  APB_scoreboard       sb;
+  APB_coverage_model   cov;
 
   function new(string name, uvm_component parent);
    super.new(name,parent); 
