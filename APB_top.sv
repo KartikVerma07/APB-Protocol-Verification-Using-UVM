@@ -18,8 +18,8 @@ import uvm_pkg::*;
 
 // Sequences & test
 `include "APB_seq_WrData_RdData.sv"
-`include "APB_seq_burstWrData_RdData.sv"
-`include "APB_seq_burstDiffWrData_RdData.sv"
+`include "APB_seq_backToBackWrThenRd.sv"
+`include "APB_seq_backToBackWrRdPairs.sv"
 `include "APB_test.sv"
 
 // DUT

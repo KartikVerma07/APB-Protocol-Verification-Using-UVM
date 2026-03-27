@@ -13,7 +13,6 @@ module APB_slave_design
 
   output logic [DATA_WIDTH-1:0]  PRDATA,
   output logic                   PREADY
-  // , output logic               PSLVERR  // (optional)
 );
 
   // Word-aligned addressing: LSB = log2(bytes per word)
@@ -23,55 +22,58 @@ module APB_slave_design
   // Simple 32x32 memory
   logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
 
-  // State machine
-  typedef enum logic [1:0] {IDLE, SETUP, ACCESS} state_e;
-  state_e ps, ns;
+  logic busy;
+  logic [3:0] delay_cnt;
 
-  // Decode word index from byte address
-  wire [ADDR_WIDTH-1:0] addr_word = PADDR[ADDR_LSB +: ADDR_WIDTH]; // // == PADDR[6:2]
+  logic [ADDR_WIDTH-1:0] addr_q;
+  logic                  write_q;
+  logic [DATA_WIDTH-1:0] wdata_q;
 
-  //Access state: read(combinational)
-  always_comb begin
-    PRDATA = '0;
-    if (PSEL && PENABLE && !PWRITE) begin
-      PRDATA = mem[addr_word];
-    end
-  end
+  wire setup_phase;
+  wire access_phase;
+  wire transfer_done;
 
-  // Sequential: state
+  assign setup_phase   = PSEL && !PENABLE;
+  assign access_phase  = PSEL && PENABLE;
+  assign transfer_done = access_phase && PREADY;
+
   always_ff @(posedge PCLK or posedge PRESET) begin
     if (PRESET) begin
-      ps <= IDLE;
-    end 
+      busy      <= 1'b0;
+      delay_cnt <= '0;
+      addr_q    <= '0;
+      write_q   <= 1'b0;
+      wdata_q   <= '0;
+    end
     else begin
-      ps <= ns;
-      if(PSEL && PENABLE && PWRITE)
-        mem[addr_word] <= PWDATA;
+      // latch request in setup phase once
+      if (setup_phase && !busy) begin
+        busy      <= 1'b1;                // remember that one APB transfer has already been accepted and is still waiting to complete
+        addr_q    <= PADDR[ADDR_LSB +: ADDR_WIDTH];
+        write_q   <= PWRITE;
+        wdata_q   <= PWDATA;
+        delay_cnt <= $urandom_range(0, 3); // simulation only
+      end
+      else if (busy && access_phase) begin
+        if (delay_cnt != 0)
+          delay_cnt <= delay_cnt - 1'b1;
+        else begin
+          // complete transfer this cycle
+          if (write_q)
+            mem[addr_q] <= wdata_q;
+
+          busy <= 1'b0;
+        end
+      end
     end
   end
-  
-  // Next-state logic
+
   always_comb begin
-    ns = ps;
-    unique case (ps)
-      IDLE:   
-        if (PSEL) ns = SETUP;
-        
-      SETUP:begin  
-        if (PSEL && PENABLE) ns = ACCESS;
-        else if(!PSEL) ns = IDLE;
-        else ns = SETUP;   
-      end
-        
-      ACCESS: begin
-        // Next cycle depends on how master changes signals:
-        if (!PSEL) ns = IDLE;
-        else if (PSEL && !PENABLE) ns = SETUP; // back-to-back transfer
-        else ns = ACCESS;
-      end
-    endcase
+    PRDATA = '0;
+    if (access_phase && busy && (delay_cnt == 0) && !write_q)
+      PRDATA = mem[addr_q];
   end
 
-  assign PREADY = PSEL && PENABLE;   // always ready in ACCESS (zero-wait)
+  assign PREADY = access_phase && busy && (delay_cnt == 0);
 
 endmodule
